@@ -32,8 +32,8 @@ class MarketAnalysis(object):
                 try:
                     self.api.api_query("returnLoanOrders", {'currency': currency, 'limit': '5'})
                 except Exception as cur_ex:
-                    print "Error: You entered an incorrect currency: '" + currency + \
-                          "' to analyse the market of, please check your settings. Error message: " + str(cur_ex)
+                    print("Error: You entered an incorrect currency: '" + currency + \
+                          "' to analyse the market of, please check your settings. Error message: " + str(cur_ex))
                     exit(1)
 
                 else:
@@ -59,8 +59,13 @@ class MarketAnalysis(object):
         for cur in self.open_files:
             with open(self.open_files[cur], 'a') as f:
                 writer = csv.writer(f, lineterminator='\n')
-                raw_data = self.api.return_loan_orders(cur, 5)['offers'][0]
-                market_data = [timestamp(), raw_data['rate']]
+                offers = self.api.return_loan_orders(cur, 30)['offers']
+                rates = [float(o['rate']) for o in offers]
+                # We filter rates that are "aberations" by keeping only the ones
+                # upper the 5th percentile
+                p5 = self.get_percentile(rates, 5)
+                rate = min([o for o in rates if o >= p5])
+                market_data = [timestamp(), rate]
                 writer.writerow(market_data)
 
     def delete_old_data(self):
